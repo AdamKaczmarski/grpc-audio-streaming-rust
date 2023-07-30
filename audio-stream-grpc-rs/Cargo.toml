@@ -1,0 +1,22 @@
+[package]
+name = "audio-stream-grpc-rs"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]] # Bin to run the AudioStreamer gRPC server
+name = "audio-streamer-server"
+path = "src/server.rs"
+
+[[bin]] # Bin to run the AudioStreamer gRPC client
+name = "audio-streamer-client"
+path = "src/client.rs"
+
+[dependencies]
+tonic = "0.9"
+prost = "0.11"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tokio-stream = "0.1"
+rodio = {version = "0.17.1", features = ["symphonia-mp3"]}
+
+[build-dependencies]
+tonic-build = "0.9"
