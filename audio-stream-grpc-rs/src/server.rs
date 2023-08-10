@@ -2,7 +2,7 @@ pub mod audiostream {
     tonic::include_proto!("audiostream");
 }
 use audiostream::audio_streamer_server::{AudioStreamer, AudioStreamerServer};
-use audiostream::{EmptyRequest, Track};
+use audiostream::{EmptyRequest, TrackStream};
 use rodio::{Decoder, Source};
 
 use std::{fs::File, io::BufReader};
@@ -19,15 +19,18 @@ pub struct AudioStreamerService {
 
 #[tonic::async_trait]
 impl AudioStreamer for AudioStreamerService {
-    type StreamTrackStream = ReceiverStream<Result<Track, Status>>;
+    // Error, message length too large:
+    // async fn get_track(&self, _: Request<EmptyRequest>) -> Result<Response<Track>, Status> {
+    //     // Track is commented out
+    //     // return Ok(Response::new(Track {
+    //     //     frequency: self.frequency.clone(),
+    //     //     channels: self.channels.clone(),
+    //     //     track_bytes: self.track_buffer.clone(),
+    //     // }));
+    //     return unimplemented!();
+    // }
 
-    async fn get_track(&self, _: Request<EmptyRequest>) -> Result<Response<Track>, Status> {
-        unimplemented!()
-        // return Ok(Response::new(Track {
-        //     track_byte: self.track_byte.clone(),
-        // }));
-    }
-
+    type StreamTrackStream = ReceiverStream<Result<TrackStream, Status>>;
     async fn stream_track(
         &self,
         _: Request<EmptyRequest>,
@@ -49,7 +52,7 @@ impl AudioStreamer for AudioStreamerService {
                 }
                 //Shouldn't send frequency and channels everytime
                 //It streams every single f32 sample which is very slow
-                tx.send(Ok(Track {
+                tx.send(Ok(TrackStream {
                     frequency,
                     channels,
                     track_byte: byte.clone(),
@@ -67,6 +70,33 @@ impl AudioStreamer for AudioStreamerService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse().unwrap();
+    // for entry in std::fs::read_dir("./tracks/")? {
+    //     let entry = entry?;
+    //     let path = entry.path();
+    //     if let Some(extension) = path.extension() {
+    //         if extension == "mp3" {
+    //             println!("Found mp3 file {:?}", entry.path());
+    //         }
+    //     } else {
+    //         println!("Couldn't get extension {:?}", entry.path());
+    //     }
+    // }
+    let mp3_files: Vec<_> = std::fs::read_dir("./tracks/")
+        .unwrap()
+        .into_iter()
+        .filter_map(|entry| {
+            if let Some(extension) = entry.as_ref().unwrap().path().extension() {
+                match extension == "mp3" {
+                    true => return Some(entry.unwrap()),
+                    false => return None,
+                }
+            } else {
+                return None;
+            }
+        })
+        .collect();
+    println!("Found mp3 files={:?}", &mp3_files);
+
     let track_file: BufReader<File> =
         BufReader::new(File::open("./tracks/Jengi_Happy.mp3").unwrap());
     let track_buffer = Decoder::new(track_file).unwrap();

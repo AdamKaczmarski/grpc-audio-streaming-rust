@@ -2,14 +2,19 @@ syntax="proto3";
 package audiostream;
 
 service AudioStreamer {
-    rpc StreamTrack (EmptyRequest) returns (stream Track);
-    rpc GetTrack (EmptyRequest) returns (Track);
+    rpc StreamTrack (EmptyRequest) returns (stream TrackStream);
+    // rpc GetTrack (EmptyRequest) returns (Track);
 }
 
-message Track {
+message TrackStream {
     float trackByte = 1;
     uint32 frequency = 2;
     uint32 channels = 3;
 }
+// message Track {
+//     repeated float trackBytes = 1;
+//     uint32 frequency = 2;
+//     uint32 channels = 3;
+// }
 
 message EmptyRequest {}
