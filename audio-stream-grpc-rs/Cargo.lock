@@ -75,6 +75,7 @@ dependencies = [
 name = "audio-stream-grpc-rs"
 version = "0.1.0"
 dependencies = [
+ "cpal",
  "prost",
  "rodio",
  "tokio",

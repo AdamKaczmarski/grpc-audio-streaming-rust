@@ -1,10 +1,12 @@
 pub mod audiostream {
     tonic::include_proto!("audiostream");
 }
-
 use std::io::BufReader;
 
+
 use audiostream::{audio_streamer_client::AudioStreamerClient, EmptyRequest, TrackRequest};
+use cpal::traits::{HostTrait, DeviceTrait, StreamTrait};
+use cpal::Data;
 use rodio::{Decoder, OutputStream, Sink};
 use tonic::transport::Channel;
 
@@ -25,6 +27,7 @@ async fn get_track_streamed(
     client: &mut AudioStreamerClient<Channel>,
     track: &String,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    //Rodio
     let (_stream, stream_handler) =
         OutputStream::try_default().expect("Couln't obtain default playback device");
     let sink: Sink = Sink::try_new(&stream_handler).unwrap();
@@ -73,6 +76,18 @@ async fn get_track_list(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    //cpal
+    let host = cpal::default_host();
+    let out_device = host.default_output_device().expect("no output device found");
+    let supported_configs_range = out_device.supported_output_configs().expect("error while getting output configs");
+    let config = supported_configs_range.next().expect("no supported configs").with_max_sample_rate();
+    let stream = out_device.build_output_stream(&config, move |data: &mut[f32], _:&cpal::OutputCallbackInfo|{
+       todo!() 
+    }, 
+    move|err|{
+        panic!("{:?}", err);
+    }, None);
+
     let mut client = AudioStreamerClient::connect("http://[::1]:50051").await?;
     let track_list: Vec<String> = get_track_list(&mut client).await?;
     println!("{:?}", track_list);
