@@ -3,10 +3,9 @@ pub mod audiostream {
 }
 use std::io::BufReader;
 
-
 use audiostream::{audio_streamer_client::AudioStreamerClient, EmptyRequest, TrackRequest};
-use cpal::traits::{HostTrait, DeviceTrait, StreamTrait};
-use cpal::Data;
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{Data, Sample};
 use rodio::{Decoder, OutputStream, Sink};
 use tonic::transport::Channel;
 
@@ -43,12 +42,9 @@ async fn get_track_streamed(
     println!("STARTED STREAMING");
     while let Some(msg) = stream.message().await? {
         let mut data: Vec<f32> = Vec::new();
-        println!("msg");
         msg.track_byte
             .iter()
             .for_each(|byte| data.push(byte.clone()));
-        // frequency = msg.frequency;
-        // channels = msg.channels;
         let source = rodio::buffer::SamplesBuffer::new(msg.channels as u16, msg.frequency, data);
         sink.append(source);
         sink.set_volume(0.03);
@@ -56,14 +52,13 @@ async fn get_track_streamed(
             sink.play();
         }
     }
-    while !sink.empty(){
+    while !sink.empty() {
         // println!("is paused? {}",sink.is_paused());
         // sink.play();
     }
     sink.stop();
 
     println!("DONE STREAMING");
-    // println!("Length of streamed data={}", data.len());
 
     return Ok(());
 }
@@ -76,17 +71,6 @@ async fn get_track_list(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //cpal
-    let host = cpal::default_host();
-    let out_device = host.default_output_device().expect("no output device found");
-    let supported_configs_range = out_device.supported_output_configs().expect("error while getting output configs");
-    let config = supported_configs_range.next().expect("no supported configs").with_max_sample_rate();
-    let stream = out_device.build_output_stream(&config, move |data: &mut[f32], _:&cpal::OutputCallbackInfo|{
-       todo!() 
-    }, 
-    move|err|{
-        panic!("{:?}", err);
-    }, None);
 
     let mut client = AudioStreamerClient::connect("http://[::1]:50051").await?;
     let track_list: Vec<String> = get_track_list(&mut client).await?;
